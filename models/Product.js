@@ -5,7 +5,28 @@ const variationSchema = new mongoose.Schema({
   color: { type: String, required: true },
   price: { type: Number, required: true },
   quantity: { type: Number, required: true },
-  linkedPhoto: [{ type: String }],
+  linkedphoto: [{ type: String }],
+});
+
+
+const lengthVariationSchema = new mongoose.Schema({
+  length: { type: String, },
+  value: { type: String, },
+  price: { type: Number, },
+  quantity: { type: Number, },
+});
+
+const qtyVariationSchema = new mongoose.Schema({
+  quantityType: { type: String, },
+  price: { type: Number, },
+  quantity: { type: Number, },
+});
+
+const colorVariationSchema = new mongoose.Schema({
+  color: { type: String, },
+  price: { type: Number, },
+  quantity: { type: Number, },
+  linkedphoto: { type: String },
 });
 
 const productSchema = new mongoose.Schema({
@@ -71,7 +92,10 @@ const productSchema = new mongoose.Schema({
   productHeight: { type: String },
   packageLength: { type: String },
   packageWidth: { type: String },
-  packageHeight: { type: String }
+  packageHeight: { type: String },
+  lengthVariations: [lengthVariationSchema],
+  qtyVariations: [qtyVariationSchema],
+  colorVariations: [colorVariationSchema],
 });
 
 

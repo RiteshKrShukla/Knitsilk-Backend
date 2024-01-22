@@ -5,6 +5,7 @@ const multer = require('multer');
 const path = require('path');
 
 
+
 // Set up multer storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -85,6 +86,9 @@ router.post('/products', upload.single('photo'), async (req, res) => {
       packageLength,
       packageWidth,
       packageHeight,
+      lengthVariations,
+      qtyVariations,
+      colorVariations,
     } = req.body;
 
     const product = new Product({
@@ -152,6 +156,9 @@ router.post('/products', upload.single('photo'), async (req, res) => {
       packageLength,
       packageWidth,
       packageHeight,
+      lengthVariations,
+      qtyVariations,
+      colorVariations,
     });
     await product.save();
     res.status(201).json(product);
@@ -161,14 +168,30 @@ router.post('/products', upload.single('photo'), async (req, res) => {
   }
 });
 
+// router.get('/products', async (req, res) => {
+//   try {
+//     const products = await Product.find();
+//     res.json(products);
+//   } catch (error) {
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// });
+
 router.get('/products', async (req, res) => {
   try {
-    const products = await Product.find();
+    const { category } = req.query;
+    let filter = {};
+
+    if (category) {
+      filter = { category };
+    }
+
+    const products = await Product.find(filter);
     res.json(products);
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
   }
-});
+})
 
 // get products by listingstatus
 router.get('/products/listingstatus', async (req, res) => {

@@ -1,74 +1,111 @@
-// routes.js
 const express = require('express');
 const { authenticate } = require('../middleware/authenticate');
-const { Usermodel } = require('../models/user.model');
-const { GoogleUsermodel } = require('../models/google.user.model ');
-const { Addressmodel } = require('../models/address.model');
+const Customer = require('../models/address.model');
+
 
 const router = express.Router();
-
 
 // Add a new address to the user's profile
 router.post('/user/address', authenticate, async (req, res) => {
     try {
-        const { customerName, email, phone, street, city, state, zipCode, country } = req.body;
+        const { userID } = req;
+        const {
+            shipping,
+            billing,
+            is_billing_same_as_shipping,
+        } = req.body;
 
-        // Find regular user by ID
-        let user = await Usermodel.findOne({ _id: req.userID });
+        // Create a new customer
+        const newCustomer = new Customer({
+            shipping,
+            billing,
+            isBillingSameAsShipping: is_billing_same_as_shipping,
+            userID
+        });
 
-        if (user) {
-            await Addressmodel.create({
-                customerName,
-                email,
-                phone,
-                street,
-                city,
-                state,
-                zipCode,
-                country,
-                userID: req.userID,
-            });
-            return res.send({ message: 'Address added successfully.' });
-        } else {
-            // Check if the user is a Google login user
-            let googleUser = await GoogleUsermodel.findOne({ _id: req.userID });
+        // Save the new customer
+        const savedCustomer = await newCustomer.save();
 
-            if (googleUser) {
-                await Addressmodel.create({
-                    customerName,
-                    email,
-                    phone,
-                    street,
-                    city,
-                    state,
-                    zipCode,
-                    country,
-                    userID: req.userID,
-                });
-                return res.send({ message: 'Address added successfully.' });
-            } else {
-                return res.status(401).send({ msg: 'Wrong token inserted!' });
-            }
+        if (!savedCustomer) {
+            // If saving fails for some reason
+            return res.status(500).send({ error: 'Failed to save customer data.' });
         }
+
+        return res.status(201).send({ msg: 'Address added successfully.', customer: savedCustomer });
     } catch (error) {
-        console.error(error);
-        return res.status(500).send({ msg: 'Error adding Address.' });
+        console.error('Error adding Address:', error);
+        return res.status(500).send({ error: 'Internal Server Error', details: error.message });
     }
 });
 
 // Get addresses for a user
 router.get('/user/address', authenticate, async (req, res) => {
     try {
-        const userID = req.userID;
+        const { userID } = req;
+        // Assuming you have a Customer model
+        const user = await Customer.find({ userID });
 
-        // Find addresses for the user
-        const addresses = await Addressmodel.find({ userID });
+        if (!user) {
+            return res.status(404).send({ msg: 'User not found.' });
+        }
 
-        return res.send({ addresses });
+        // Return the user's addresses
+        return res.status(200).send({ addresses: user });
     } catch (error) {
         console.error(error);
         return res.status(500).send({ msg: 'Error getting addresses.' });
     }
 });
+
+// Edit an address
+router.put('/user/address/:id', authenticate, async (req, res) => {
+    try {
+        const { userID } = req;
+        const { id } = req.params;
+        const {
+            shipping,
+            billing,
+            is_billing_same_as_shipping,
+        } = req.body;
+
+        const updatedCustomer = await Customer.findOneAndUpdate(
+            { _id: id, userID },
+            {
+                shipping,
+                billing,
+                isBillingSameAsShipping: is_billing_same_as_shipping,
+            },
+            { new: true }
+        );
+
+        if (!updatedCustomer) {
+            return res.status(404).send({ msg: 'Address not found or user not authorized.' });
+        }
+
+        return res.status(200).send({ msg: 'Address updated successfully.', customer: updatedCustomer });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).send({ msg: 'Error updating address.' });
+    }
+});
+
+// Delete an address
+router.delete('/user/address/:id', authenticate, async (req, res) => {
+    try {
+        const { userID } = req;
+        const { id } = req.params;
+
+        const deletedCustomer = await Customer.findOneAndDelete({ _id: id, userID });
+
+        if (!deletedCustomer) {
+            return res.status(404).send({ msg: 'Address not found or user not authorized.' });
+        }
+        return res.status(200).send({ msg: 'Address deleted successfully.', customer: deletedCustomer });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).send({ msg: 'Error deleting address.' });
+    }
+});
+
 
 module.exports = router;

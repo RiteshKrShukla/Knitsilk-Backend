@@ -37,15 +37,19 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const subcategoryRoutes = require('./routes/subcategoryRoutes');
 const messagesRouter = require('./routes/messages');
 const subcategory = require("./models/subcategoryModel");
-const subscribeRoutes =  require('./routes/subscribe');
-const b2b =  require('./routes/b2bInquiry')
-
+const subscribeRoutes = require('./routes/subscribe');
+const b2b = require('./routes/b2bInquiry');
+const couponRoutes = require('./routes/couponRoutes');
+const axios = require('axios');
+const order = require("./models/order");
 const app = express();
 
 app.use(express.json({ limit: '200mb' }));
 app.use(express.urlencoded({ limit: '50mb' }))
 
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true }).then(() => {
+	console.log("Connected to MongoDB")
+});
 
 app.use(
 	cookieSession({
@@ -81,7 +85,42 @@ app.use('/adminsetting', categoryRoutes);
 app.use('/adminsetting', subcategoryRoutes);
 app.use('/messages', messagesRouter);
 app.use('/subscribe', subscribeRoutes)
-app.use('/b2bInquiry', b2b)
+app.use('/b2bInquiry', b2b);
+app.use('/discount', couponRoutes);
+
+const razorpayRoute = require('./routes/razorpayRoute');
+const orderDraft = require("./models/orderDraft");
+
+app.use("/api", razorpayRoute);
+
+app.post('/sendEmail', async (req, res) => {
+	try {
+		const url = 'http://enterprise.webaroo.com/GatewayAPI/rest';
+		const { name, recipients, subject, content } = req.body;
+
+		const formData = new FormData();
+		formData.append('method', 'EMS_POST_CAMPAIGN');
+		formData.append('userid', '2000701345');
+		formData.append('password', '@dell2020');
+		formData.append('v', '1.1');
+		formData.append('recipients', recipients);
+		formData.append('subject', encodeURIComponent(subject));
+		formData.append('content', content);
+		formData.append('content_type', 'text/html');
+		formData.append('name', name);
+
+		const response = await axios.post(url, formData, {
+			headers: {
+				'Content-Type': 'multipart/form-data',
+			},
+		});
+		console.log(response.data);
+		res.status(200).send('Email sent successfully.');
+	} catch (error) {
+		console.error('Error sending email:', error.toString());
+		res.status(500).send('Internal Server Error');
+	}
+});
 
 //Basic sign up
 app.post("/signup", async (req, res) => {
@@ -148,25 +187,25 @@ app.get("/getallusers", async (req, res) => {
 		const basicUsers = await Usermodel.find({});
 		const googleUsers = await GoogleUsermodel.find({});
 		const allUsers = [...basicUsers, ...googleUsers];
-		res.send({ message: "All users", data: allUsers });
+		res.send(allUsers);
 	} catch (error) {
 		res.status(500).send({ message: "Error fetching users." });
 	}
-	try {
-		let { email, name } = req.body;
-		let user = await GoogleUsermodel.findOne({ email });
-		if (user) {
-			let token = jwt.sign({ userID: user._id }, process.env.SECRET_KEY_FOR_LOGIN_VERIFY);
-			res.send({ msg: "Sign In with google success", token, userName: name });
-		} else {
-			// User not found, create a new user in the database
-			let newUser = await GoogleUsermodel.create({ name, email });
-			let token = jwt.sign({ userID: newUser._id }, process.env.SECRET_KEY_FOR_LOGIN_VERIFY);
-			res.send({ msg: "Sign Up with google success", token, userName: name });
-		}
-	} catch (err) {
-		res.send({ msg: err.msg });
-	}
+	// try {
+	// 	let { email, name } = req.body;
+	// 	let user = await GoogleUsermodel.findOne({ email });
+	// 	if (user) {
+	// 		let token = jwt.sign({ userID: user._id }, process.env.SECRET_KEY_FOR_LOGIN_VERIFY);
+	// 		res.send({ msg: "Sign In with google success", token, userName: name });
+	// 	} else {
+	// 		// User not found, create a new user in the database
+	// 		let newUser = await GoogleUsermodel.create({ name, email });
+	// 		let token = jwt.sign({ userID: newUser._id }, process.env.SECRET_KEY_FOR_LOGIN_VERIFY);
+	// 		res.send({ msg: "Sign Up with google success", token, userName: name });
+	// 	}
+	// } catch (err) {
+	// 	res.send({ msg: err.msg });
+	// }
 });
 
 // Delete User by ID
@@ -438,7 +477,7 @@ app.post('/api/upload/videos', upload2.array('videos', 1), async (req, res) => {
 // Configure PayPal
 const { PAYPAL_MODE, PAYPAL_CLIENT_KEY, PAYPAL_SECRET_KEY } = process.env;
 paypal.configure({
-	mode: PAYPAL_MODE, 
+	mode: PAYPAL_MODE,
 	client_id: PAYPAL_CLIENT_KEY,
 	client_secret: PAYPAL_SECRET_KEY,
 });
@@ -537,53 +576,185 @@ app.post("/payment/store", authenticate, async (req, res) => {
 
 
 app.post('/products/filterBySubcategories', async (req, res) => {
-    const { subcategories, category } = req.body;
-    try {
-        // Implement the logic to filter products based on subcategories and category
-        // Use Mongoose queries to fetch the filtered products
-        const filteredProducts = await Product.find({
-            subCategory: { $in: subcategories },
-            category,
-        });
+	const { subcategories, category } = req.body;
+	console.log(subcategories);
+	try {
+		// Implement the logic to filter products based on subcategories and category
+		// Use Mongoose queries to fetch the filtered products
+		const filteredProducts = await Product.find({
+			subCategory: { $in: subcategories },
+			category,
+		});
 
-        res.json(filteredProducts);
-    } catch (error) {
-        console.error('Error fetching products:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
+		res.json(filteredProducts);
+	} catch (error) {
+		console.error('Error fetching products:', error);
+		res.status(500).json({ error: 'Internal Server Error' });
+	}
 });
 
 
 app.post('/products/colors', async (req, res) => {
 	try {
-	  const { color, category } = req.query;
-	  console.log(color, category);
-  
-	  if ( color === 'All' && category=="All") {
-		// If color is not specified or 'All', return all products in the category
-		const products = await Product.find();
-	
-		return res.json(products);
-	  }else if(color === 'All' && category!="All"){
-		const products = await Product.find({category});
+		const { color, category } = req.query;
+		console.log(color, category);
 
-		return res.json(products);
-	  }else if (category =="All" && color!="All"){
-		console.log("object")
-		const products = await Product.find({color});
-		return res.json(products);
-	  }
-  else{
+		if (color === 'All' && category == "All") {
+			// If color is not specified or 'All', return all products in the category
+			const products = await Product.find();
 
-	  // If a specific color is provided, filter products by that color and category
-	  const products = await Product.find({ category,  color });
-	  res.json(products);
-  }
+			return res.json(products);
+		} else if (color === 'All' && category != "All") {
+			const products = await Product.find({ category });
+
+			return res.json(products);
+		} else if (category == "All" && color != "All") {
+			console.log("object")
+			const products = await Product.find({ color });
+			return res.json(products);
+		}
+		else {
+
+			// If a specific color is provided, filter products by that color and category
+			const products = await Product.find({ category, color });
+			res.json(products);
+		}
 	} catch (error) {
-	  console.error('Error fetching products by color:', error);
-	  res.status(500).json({ error: 'Internal Server Error' });
+		console.error('Error fetching products by color:', error);
+		res.status(500).json({ error: 'Internal Server Error' });
 	}
-  });
-  
+});
+
+
+app.get('/filterbyyarn', async (req, res) => {
+	try {
+		const { category, yarnWeight } = req.query;
+
+		console.log('Received request with parameters:', category, yarnWeight);
+
+		if (!yarnWeight || yarnWeight === 'All' || category === 'All') {
+			const products = await Product.find({ category });
+			return res.json(products);
+		}
+
+		const products = await Product.find({
+			category,
+			yarnWeight,
+		});
+
+		res.json(products);
+	} catch (error) {
+		console.error('Error fetching products by yarn weight:', error);
+		res.status(500).json({ error: 'Internal Server Error' });
+	}
+});
+
+
+
+
+app.post("/order/draft", authenticate, async (req, res) => {
+	try {
+		const { userID } = req;
+		const data = req.body;
+
+		// Check if there's an existing draft for the user
+		const existingDraft = await orderDraft.findOne({ userID: userID });
+
+		if (existingDraft) {
+			// If a draft exists, update the orderdetails
+			existingDraft.orderdetails = data;
+			const updatedDraft = await existingDraft.save();
+			console.log(updatedDraft);
+
+			// Respond with a success message or the updated document
+			res.status(200).json({ msg: "Order draft updated successfully", orderDraft: updatedDraft });
+		} else {
+			// If no draft exists, create a new one
+			const newOrderDraft = await orderDraft.create({
+				orderdetails: data,
+				userID: userID
+			});
+
+			console.log(newOrderDraft);
+
+			// Respond with a success message or the saved document
+			res.status(201).json({ msg: "Order draft saved successfully", orderDraft: newOrderDraft });
+		}
+	} catch (error) {
+		console.error('Error saving/updating order draft:', error);
+		res.status(500).json({ error: 'Internal Server Error' });
+	}
+});
+
+
+app.get("/order/draft", authenticate, async (req, res) => {
+	try {
+		let data = await orderDraft.find({ userID: req.userID });
+		// Send the data as a response
+		res.status(200).json(data);
+	} catch (error) {
+		console.error('Error fetching order drafts:', error);
+		// Handle the error, send an error response, or do something else as needed
+		res.status(500).json({ error: 'Internal Server Error' });
+	}
+});
+
+
+
+
+
+app.post("/order", authenticate, async (req, res) => {
+	try {
+		const { userID } = req;
+		const data = req.body;
+		console.log(data)
+
+
+		// If no draft exists, create a new one
+		const newOrderDraft = await order.create({
+			orderdetails: data,
+			userID: userID
+		});
+
+
+		// Respond with a success message or the saved document
+		res.status(201).json({ msg: "Order saved successfully", });
+
+	} catch (error) {
+		console.error('Error saving/updating order draft:', error);
+		res.status(500).json({ error: 'Internal Server Error' });
+	}
+});
+
+app.get("/order", authenticate, async (req, res) => {
+	try {
+		const { userID } = req;
+
+		// Retrieve all orders for the user
+		const allOrders = await order.find({ userID: userID });
+
+		// Respond with the fetched orders
+		res.status(200).json(allOrders);
+	} catch (error) {
+		console.error('Error fetching orders:', error);
+		res.status(500).json({ error: 'Internal Server Error' });
+	}
+});
+
+app.get("/allOrders", async (req, res) => {
+	try {
+		// Retrieve all orders for all users
+		const allOrders = await order.find();
+
+		// Respond with the fetched orders
+		res.status(200).json(allOrders);
+	} catch (error) {
+		console.error('Error fetching orders:', error);
+		res.status(500).json({ error: 'Internal Server Error' });
+	}
+});
+
+
+
 const port = process.env.PORT || 8080;
 app.listen(port, () => console.log(`Listening on port ${port}...`));

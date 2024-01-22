@@ -25,6 +25,61 @@ router.get('/shipping-profiles', async (req, res) => {
 });
 
 
+router.get('/shipping-profiles/country/:countryName', async (req, res) => {
+    try {
+        const countryName = req.params.countryName;
+
+        const shippingProfiles = await ShippingProfile.find();
+
+        if (!shippingProfiles || shippingProfiles.length === 0) {
+            return res.status(404).send({ error: 'No shipping profiles found' });
+        }
+
+        let countryData = null;
+
+        // Iterate over each shipping profile
+        for (const shippingProfile of shippingProfiles) {
+            for (const continent in shippingProfile.data) {
+                if (shippingProfile.data.hasOwnProperty(continent)) {
+                    for (const region in shippingProfile.data[continent]) {
+                        if (shippingProfile.data[continent].hasOwnProperty(region)) {
+                            const countries = shippingProfile.data[continent][region].countries || [];
+
+                            // Check if the specified country is present in the countries array
+                            if (countries.some(country => country.toLowerCase() === countryName.toLowerCase())) {
+                                countryData = shippingProfile.data[continent][region];
+                                break; // Stop iteration once the country is found
+                            }
+                        }
+                    }
+
+                    if (countryData) {
+                        break; // Stop further iteration if the country is found
+                    }
+                }
+            }
+        }
+
+        if (!countryData) {
+            return res.status(404).send({ error: 'Country not found in shipping profiles' });
+        }
+
+        const response = {
+            countryName,
+            shippingFees: countryData.shippingFees || {},
+            transitTimesStandard: countryData.transitTimesStandard || '',
+            transitTimesExpedited: countryData.transitTimesExpedited || '',
+        };
+
+        res.send(response);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: 'Internal server error' });
+    }
+});
+
+
+
 // Get a specific shipping profile by ID
 router.get('/shipping-profiles/:id', async (req, res) => {
     try {
