@@ -29,9 +29,14 @@ const colorVariationSchema = new mongoose.Schema({
   linkedphoto: { type: String },
 });
 
+const discountSchema = new mongoose.Schema({
+  percent: { type: Number },
+})
+
 const productSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
+  discount: { type: Number },
   priceINR: { type: Number, },
   priceUSD: { type: Number, },
   priceGBP: { type: Number, },
@@ -96,6 +101,7 @@ const productSchema = new mongoose.Schema({
   lengthVariations: [lengthVariationSchema],
   qtyVariations: [qtyVariationSchema],
   colorVariations: [colorVariationSchema],
+  sku: { type: String },
 });
 
 

@@ -26,6 +26,7 @@ const cloudinary = require('cloudinary').v2;  // Note: Use v2
 const paypal = require('paypal-rest-sdk');
 const adminAuth = require('./routes/adminAuth');
 const otpRoutes = require('./routes/otpRoutes');
+const emailRoutes = require('./routes/emailRoutes.js')
 const addressRoutes = require('./routes/addressRoute');
 const Payment = require("./models/payment.model");
 const shippingProfileRoutes = require('./routes/shippinProfileRoute');
@@ -62,7 +63,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 const corsOptions = {
-	origin: 'https://knitsilk.netlify.app',
+	origin: 'http://localhost:3000',
 	methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
 	credentials: true,
 };
@@ -87,6 +88,7 @@ app.use('/messages', messagesRouter);
 app.use('/subscribe', subscribeRoutes)
 app.use('/b2bInquiry', b2b);
 app.use('/discount', couponRoutes);
+app.use('/campaign', emailRoutes)
 
 const razorpayRoute = require('./routes/razorpayRoute');
 const orderDraft = require("./models/orderDraft");
@@ -726,6 +728,7 @@ app.post("/order", authenticate, async (req, res) => {
 	}
 });
 
+// To get all orders of a certain user ----------------------------------
 app.get("/order", authenticate, async (req, res) => {
 	try {
 		const { userID } = req;
@@ -741,6 +744,7 @@ app.get("/order", authenticate, async (req, res) => {
 	}
 });
 
+// To get all orders---------------------
 app.get("/allOrders", async (req, res) => {
 	try {
 		// Retrieve all orders for all users
@@ -754,6 +758,49 @@ app.get("/allOrders", async (req, res) => {
 	}
 });
 
+
+// To get products with discounts > 0 ------------------
+app.get("/productsWithDiscount", async (req, res) => {
+    try {
+        const productsWithDiscount = await Product.find({ discount: { $gt: 0 } });
+        res.status(200).json(productsWithDiscount);
+    } catch (error) {
+        console.error('Error fetching products with discount:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+// offers - categories filter
+app.post('/products/offers/filterBycategories', async (req, res) => {
+    const { category } = req.body;
+    try {
+        const filteredProducts = await Product.find({
+            category,
+            discount: { $gt: 0 },
+        });
+        res.json(filteredProducts);
+    } catch (error) {
+        console.error('Error fetching products by category:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+// offers - subcategories filter
+app.post('/products/offers/filterBySubcategories', async (req, res) => {
+    const { subcategories, category } = req.body;
+    try {
+        const filteredProducts = await Product.find({
+            subCategory: { $in: subcategories },
+            category,
+            discount: { $gt: 0 },
+        });
+        res.json(filteredProducts);
+    } catch (error) {
+        console.error('Error fetching products by subcategory:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+  
 
 
 const port = process.env.PORT || 8080;

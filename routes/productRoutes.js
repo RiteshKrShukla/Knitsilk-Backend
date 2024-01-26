@@ -25,6 +25,7 @@ router.post('/products', upload.single('photo'), async (req, res) => {
     const {
       title,
       description,
+      discount,
       price,
       globalPrice,
       color,
@@ -89,11 +90,13 @@ router.post('/products', upload.single('photo'), async (req, res) => {
       lengthVariations,
       qtyVariations,
       colorVariations,
+      sku,
     } = req.body;
 
     const product = new Product({
       title,
       description,
+      discount,
       price,
       globalPrice,
       color,
@@ -159,6 +162,7 @@ router.post('/products', upload.single('photo'), async (req, res) => {
       lengthVariations,
       qtyVariations,
       colorVariations,
+      sku,
     });
     await product.save();
     res.status(201).json(product);
