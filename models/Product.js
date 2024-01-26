@@ -76,7 +76,7 @@ const productSchema = new mongoose.Schema({
   dateAdded: { type: Date, default: Date.now },
   length: { type: Number },
   width: { type: Number },
-  skeins: { type: Number },
+  units: { type: Number },
   variations: [variationSchema],
   HSNCode: { type: String },
   wrapsPerInch: { type: String },
