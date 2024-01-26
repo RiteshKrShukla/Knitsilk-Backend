@@ -61,7 +61,7 @@ const productSchema = new mongoose.Schema({
   materials: [{ type: String }],
   material: { type: String },
   secondaryMaterial: { type: String },
-  deliveryOption: { type: String, enum: ['Option1', 'Option2', 'Option3', 'Option4', 'Option5'] },
+  deliveryOption: { type: String },
   itemWeight: { type: String },
   itemSize: { type: String },
   manufacturer: { type: String },
