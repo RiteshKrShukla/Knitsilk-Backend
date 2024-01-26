@@ -63,7 +63,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 const corsOptions = {
-	origin: 'https://knitsilk.onrender.com',
+	origin: 'https://knitsilk.netlify.app',
 	methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
 	credentials: true,
 };
