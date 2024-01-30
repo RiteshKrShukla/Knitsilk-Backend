@@ -10,14 +10,14 @@ exports.submitForm = async (req, res) => {
         await newContact.save();
 
         // Send confirmation email using Brevo API
-        const brevoApiKey = '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';
+        const brevoApiKey = process.env.BREVO;
 
         const brevoApiUrl = 'https://api.brevo.com/v3/smtp/email';
 
         const brevoPayload = {
             sender: {
                 name: 'Knitsilk',
-                email: 'orders@knitsilk.com',
+                email: 'noreply@knitsilk.com',
             },
             to: [
                 {

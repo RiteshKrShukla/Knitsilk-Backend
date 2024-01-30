@@ -20,10 +20,3 @@ payment_route.get('/cancel', paymentController.cancelPage);
 module.exports = payment_route;
 
 
-
-
-// ----->
-// Admin login - otp based
-// Nav Category Menu Change
-// Nav Link to respective pages
-

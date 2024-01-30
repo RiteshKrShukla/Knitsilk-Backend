@@ -24,6 +24,7 @@ router.post('/products', upload.single('photo'), async (req, res) => {
   try {
     const {
       title,
+      userCurrency,
       description,
       discount,
       price,
@@ -97,6 +98,7 @@ router.post('/products', upload.single('photo'), async (req, res) => {
       title,
       description,
       discount,
+      userCurrency,
       price,
       globalPrice,
       color,

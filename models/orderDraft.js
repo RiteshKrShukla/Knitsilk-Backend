@@ -9,6 +9,9 @@ const orderDraftSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  userCurrency:{
+    type: String,
+  }
 });
 
 module.exports = mongoose.model('OrderDraft', orderDraftSchema);

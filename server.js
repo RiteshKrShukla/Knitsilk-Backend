@@ -34,6 +34,8 @@ const tagRoutes = require('./routes/tagRoutes');
 const colorRoutes = require('./routes/colorRoutes');
 const http = require('http');
 const unitRoutes = require('./routes/unitRoutes');
+const blogRoutes = require('./routes/blogRoutes.js')
+const courierRoutes = require('./routes/courierRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const subcategoryRoutes = require('./routes/subcategoryRoutes');
 const messagesRouter = require('./routes/messages');
@@ -41,9 +43,9 @@ const subcategory = require("./models/subcategoryModel");
 const subscribeRoutes = require('./routes/subscribe');
 const b2b = require('./routes/b2bInquiry');
 const couponRoutes = require('./routes/couponRoutes');
-const axios = require('axios');
 const order = require("./models/order");
 const app = express();
+const axios = require('axios');
 
 app.use(express.json({ limit: '200mb' }));
 app.use(express.urlencoded({ limit: '50mb' }))
@@ -63,7 +65,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 const corsOptions = {
-	origin: 'https://knitsilk.netlify.app',
+	origin: 'http://localhost:3000',
 	methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
 	credentials: true,
 };
@@ -82,6 +84,7 @@ app.use('/', shippingProfileRoutes);
 app.use('/adminsetting', tagRoutes);
 app.use('/adminsetting', colorRoutes);
 app.use('/adminsetting', unitRoutes);
+app.use('/adminsetting', courierRoutes);
 app.use('/adminsetting', categoryRoutes);
 app.use('/adminsetting', subcategoryRoutes);
 app.use('/messages', messagesRouter);
@@ -89,40 +92,13 @@ app.use('/subscribe', subscribeRoutes)
 app.use('/b2bInquiry', b2b);
 app.use('/discount', couponRoutes);
 app.use('/campaign', emailRoutes)
+app.use('/blogs', blogRoutes);
 
 const razorpayRoute = require('./routes/razorpayRoute');
 const orderDraft = require("./models/orderDraft");
+const adminStatus = require("./models/adminstatus.js");
 
 app.use("/api", razorpayRoute);
-
-app.post('/sendEmail', async (req, res) => {
-	try {
-		const url = 'http://enterprise.webaroo.com/GatewayAPI/rest';
-		const { name, recipients, subject, content } = req.body;
-
-		const formData = new FormData();
-		formData.append('method', 'EMS_POST_CAMPAIGN');
-		formData.append('userid', '2000701345');
-		formData.append('password', '@dell2020');
-		formData.append('v', '1.1');
-		formData.append('recipients', recipients);
-		formData.append('subject', encodeURIComponent(subject));
-		formData.append('content', content);
-		formData.append('content_type', 'text/html');
-		formData.append('name', name);
-
-		const response = await axios.post(url, formData, {
-			headers: {
-				'Content-Type': 'multipart/form-data',
-			},
-		});
-		console.log(response.data);
-		res.status(200).send('Email sent successfully.');
-	} catch (error) {
-		console.error('Error sending email:', error.toString());
-		res.status(500).send('Internal Server Error');
-	}
-});
 
 //Basic sign up
 app.post("/signup", async (req, res) => {
@@ -193,21 +169,6 @@ app.get("/getallusers", async (req, res) => {
 	} catch (error) {
 		res.status(500).send({ message: "Error fetching users." });
 	}
-	// try {
-	// 	let { email, name } = req.body;
-	// 	let user = await GoogleUsermodel.findOne({ email });
-	// 	if (user) {
-	// 		let token = jwt.sign({ userID: user._id }, process.env.SECRET_KEY_FOR_LOGIN_VERIFY);
-	// 		res.send({ msg: "Sign In with google success", token, userName: name });
-	// 	} else {
-	// 		// User not found, create a new user in the database
-	// 		let newUser = await GoogleUsermodel.create({ name, email });
-	// 		let token = jwt.sign({ userID: newUser._id }, process.env.SECRET_KEY_FOR_LOGIN_VERIFY);
-	// 		res.send({ msg: "Sign Up with google success", token, userName: name });
-	// 	}
-	// } catch (err) {
-	// 	res.send({ msg: err.msg });
-	// }
 });
 
 // Delete User by ID
@@ -487,6 +448,7 @@ paypal.configure({
 app.post('/pay', async (req, res) => {
 	try {
 		const { items } = req.body;
+		console.log(items)
 		const prices = items.map(item => item.priceUSD * item.quantity);
 		const totalPrice = prices.reduce((sum, price) => sum + price, 0);
 		const create_payment_json = {
@@ -500,21 +462,24 @@ app.post('/pay', async (req, res) => {
 			},
 			transactions: [{
 				item_list: {
-					items: items.map(item => ({
-						name: item.title,
-						sku: item._id,
-						price: item.priceUSD,
+					items: [{
+						name: items[0].title,
+						sku: items[0]._id,
+						price: items[0].priceUSD,
 						currency: 'USD',
-						quantity: item.quantity,
-					})),
+						quantity: items[0].quantity,
+					}]
 				},
 				amount: {
 					currency: 'USD',
-					total: (totalPrice).toFixed(2).toString(),
+					total: Number((totalPrice).toFixed(2).toString()),
 				},
 				description: 'Purchase description',
 			}],
 		};
+
+		// console.log(" dfsafdsafdsfasfds",create_payment_json,Number((totalPrice).toFixed(2).toString()),items)
+
 		paypal.payment.create(create_payment_json, (error, payment) => {
 			if (error) {
 				throw error;
@@ -547,7 +512,7 @@ app.post(`/pay/success`, async (req, res) => {
 		};
 		paypal.payment.execute(paymentId, execute_payment_json, function (error, payment) {
 			if (error) {
-				throw error;
+				res.send(error.message)
 			} else {
 				res.send({ paymentDetails: payment });
 			}
@@ -574,8 +539,6 @@ app.post("/payment/store", authenticate, async (req, res) => {
 		return res.status(500).send({ msg: "Error adding item to cart." });
 	}
 });
-
-
 
 app.post('/products/filterBySubcategories', async (req, res) => {
 	const { subcategories, category } = req.body;
@@ -627,7 +590,6 @@ app.post('/products/colors', async (req, res) => {
 	}
 });
 
-
 app.get('/filterbyyarn', async (req, res) => {
 	try {
 		const { category, yarnWeight } = req.query;
@@ -650,9 +612,6 @@ app.get('/filterbyyarn', async (req, res) => {
 		res.status(500).json({ error: 'Internal Server Error' });
 	}
 });
-
-
-
 
 app.post("/order/draft", authenticate, async (req, res) => {
 	try {
@@ -688,7 +647,6 @@ app.post("/order/draft", authenticate, async (req, res) => {
 	}
 });
 
-
 app.get("/order/draft", authenticate, async (req, res) => {
 	try {
 		let data = await orderDraft.find({ userID: req.userID });
@@ -702,15 +660,10 @@ app.get("/order/draft", authenticate, async (req, res) => {
 });
 
 
-
-
-
 app.post("/order", authenticate, async (req, res) => {
 	try {
 		const { userID } = req;
 		const data = req.body;
-		console.log(data)
-
 
 		// If no draft exists, create a new one
 		const newOrderDraft = await order.create({
@@ -718,12 +671,77 @@ app.post("/order", authenticate, async (req, res) => {
 			userID: userID
 		});
 
+		// const userEmail = customerInfo.shipping.email;
+
+		// const brevoApiKey = process.env.BREVO;
+		// const brevoApiUrl = 'https://api.brevo.com/v3/smtp/email';
+
+		// // Send confirmation email to the user
+		// const userBrevoPayload = {
+		// 	sender: {
+		// 		name: 'KnitSilk',
+		// 		email: 'noreply@knitsilk.com',
+		// 	},
+		// 	to: [
+		// 		{
+		// 			email: userEmail,
+		// 		}
+		// 	],
+		// 	subject: '🌟 Order Confirmation - Knitsilk 🌟',
+		// 	htmlContent: `
+        //         <!-- User confirmation email content -->
+        //         <div style="text-align: center; background-color: #6FA82F; color: white; padding: 20px;">
+        //             <img src="https://knitsilk.netlify.app/static/media/Knitsilk%20logo.3188ad111cd972e3b365.png" alt="Knitsilk Logo" style="max-width: 200px; height: auto;">
+        //             <h1>Order Confirmation</h1>
+        //             <p>Thank you for placing an order with us. Your order details:</p>
+        //             <p><strong>Order ID:</strong> ${newOrderDraft._id}</p>
+        //             <p><strong>Customer Name:</strong> ${customerInfo.shipping.customerName}</p>
+        //             <p><strong>Email:</strong> ${userEmail}</p>
+        //             <!-- Include other order details as needed -->
+        //             <p><strong>Final Amount:</strong> ${finalAmount}</p>
+        //             <p>For any inquiries or assistance, feel free to contact us at <a href="mailto:support@knitsilk.com">support@knitsilk.com</a>.</p>
+        //             <p>Best Regards,<br>KnitSilk</p>
+        //         </div>
+        //     `,
+		// };
+
+		// // Send confirmation email to the admin
+		// const adminEmail = 'ritesh.digiblocks@gmail.com';
+		// const adminBrevoPayload = {
+		// 	sender: {
+		// 		name: 'KnitSilk',
+		// 		email: 'noreply@knitsilk.com',
+		// 	},
+		// 	to: [
+		// 		{
+		// 			email: adminEmail,
+		// 		}
+		// 	],
+		// 	subject: '🌟 New Order Received - Knitsilk 🌟',
+		// 	htmlContent: `
+        //         <p>New order received with the following details:</p>
+        //         <p><strong>Customer Name:</strong> ${customerInfo.shipping.customerName}</p>
+        //         <p><strong>Email:</strong> ${userEmail}</p>
+        //         <!-- Include other order details as needed -->
+        //         <p><strong>Final Amount:</strong> ${finalAmount}</p>
+        //     `,
+		// };
+
+		// const brevoHeaders = {
+		// 	'accept': 'application/json',
+		// 	'api-key': brevoApiKey,
+		// 	'content-type': 'application/json',
+		// };
+
+		// // Send emails
+		// await axios.post(brevoApiUrl, userBrevoPayload, { headers: brevoHeaders });
+		// await axios.post(brevoApiUrl, adminBrevoPayload, { headers: brevoHeaders });
 
 		// Respond with a success message or the saved document
-		res.status(201).json({ msg: "Order saved successfully", });
+		res.status(201).json({ msg: "Order saved successfully." });
 
 	} catch (error) {
-		console.error('Error saving/updating order draft:', error);
+		console.error('Error saving/updating order draft or sending confirmation emails:', error);
 		res.status(500).json({ error: 'Internal Server Error' });
 	}
 });
@@ -758,49 +776,171 @@ app.get("/allOrders", async (req, res) => {
 	}
 });
 
+// New route to get an order by its ID
+app.get("/allOrders/:orderId", async (req, res) => {
+	try {
+		const orderId = req.params.orderId;
+
+		// Retrieve the order by its ID
+		const foundOrder = await order.findById(orderId);
+
+		// Check if the order was found
+		if (!foundOrder) {
+			return res.status(404).json({ error: 'Order not found' });
+		}
+
+		// Respond with the fetched order
+		res.status(200).json(foundOrder);
+	} catch (error) {
+		console.error('Error fetching order by ID:', error);
+		res.status(500).json({ error: 'Internal Server Error' });
+	}
+});
+
+
+app.put("/updateTracking/:orderId", async (req, res) => {
+	const { orderId } = req.params;
+	const { trackingId, courier, trackingUrl } = req.body;
+
+	try {
+		// Find the order by orderId
+		const foundOrder = await order.findOne({ _id: orderId });
+
+		if (!foundOrder) {
+			return res.status(404).json({ error: "Order not found" });
+		}
+
+		// Update the tracking details
+		foundOrder.orderdetails.data.trackingId = trackingId;
+		foundOrder.orderdetails.data.deliveryPlatform = courier;
+		foundOrder.orderdetails.data.trackingUrl = trackingUrl;
+
+		// Save the updated order
+		await foundOrder.save();
+
+		// Respond with the updated order
+		res.status(200).json(foundOrder);
+		console.log(foundOrder)
+	} catch (error) {
+		console.error("Error updating tracking details:", error);
+		res.status(500).json({ error: "Internal Server Error" });
+	}
+});
+
+app.put("/updateStatus/:orderId", async (req, res) => {
+	const { orderId } = req.params;
+	const { status } = req.body;
+
+	try {
+		// Find the order by orderId
+		const foundOrder = await order.findOne({ _id: orderId });
+
+		if (!foundOrder) {
+			return res.status(404).json({ error: "Order not found" });
+		}
+
+		// Update the status
+		foundOrder.status = status;
+
+		// Save the updated order
+		await foundOrder.save();
+
+		// Respond with the updated order
+		res.status(200).json(foundOrder);
+		console.log(foundOrder);
+	} catch (error) {
+		console.error("Error updating status:", error);
+		res.status(500).json({ error: "Internal Server Error" });
+	}
+});
+
+
+// To get a single order by orderid in all orders---------------------
+app.post("/allOrders", async (req, res) => {
+	try {
+		let { orderID } = req.body;
+		console.log(orderID);
+		// Retrieve all orders for all users
+		const allOrders = await order.findOne({ _id: orderID });
+		// // Respond with the fetched orders
+		res.status(200).json(allOrders);
+	} catch (error) {
+		console.error('Error fetching orders:', error);
+		res.status(500).json({ error: 'Internal Server Error' });
+	}
+});
+
 
 // To get products with discounts > 0 ------------------
 app.get("/productsWithDiscount", async (req, res) => {
-    try {
-        const productsWithDiscount = await Product.find({ discount: { $gt: 0 } });
-        res.status(200).json(productsWithDiscount);
-    } catch (error) {
-        console.error('Error fetching products with discount:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
+	try {
+		const productsWithDiscount = await Product.find({ discount: { $gt: 0 } });
+		res.status(200).json(productsWithDiscount);
+	} catch (error) {
+		console.error('Error fetching products with discount:', error);
+		res.status(500).json({ error: 'Internal Server Error' });
+	}
 });
 
 // offers - categories filter
 app.post('/products/offers/filterBycategories', async (req, res) => {
-    const { category } = req.body;
-    try {
-        const filteredProducts = await Product.find({
-            category,
-            discount: { $gt: 0 },
-        });
-        res.json(filteredProducts);
-    } catch (error) {
-        console.error('Error fetching products by category:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
+	const { category } = req.body;
+	try {
+		const filteredProducts = await Product.find({
+			category,
+			discount: { $gt: 0 },
+		});
+		res.json(filteredProducts);
+	} catch (error) {
+		console.error('Error fetching products by category:', error);
+		res.status(500).json({ error: 'Internal Server Error' });
+	}
 });
 
 // offers - subcategories filter
 app.post('/products/offers/filterBySubcategories', async (req, res) => {
-    const { subcategories, category } = req.body;
+	const { subcategories, category } = req.body;
+	try {
+		const filteredProducts = await Product.find({
+			subCategory: { $in: subcategories },
+			category,
+			discount: { $gt: 0 },
+		});
+		res.json(filteredProducts);
+	} catch (error) {
+		console.error('Error fetching products by subcategory:', error);
+		res.status(500).json({ error: 'Internal Server Error' });
+	}
+});
+
+app.get('/getadminstatus',async(req,res)=>{
+let status =await adminStatus.findOne({});
+res.send({msg:`Admin is ${status}`,data:status})
+})
+
+app.post('/putadminstatus', async (req, res) => {
     try {
-        const filteredProducts = await Product.find({
-            subCategory: { $in: subcategories },
-            category,
-            discount: { $gt: 0 },
-        });
-        res.json(filteredProducts);
+        const filter = {}; 
+
+        // Check if admin status document exists
+        let existingStatus = await adminStatus.findOne(filter);
+
+        if (!existingStatus) {
+            // Create a new admin status document with isOnline field
+            existingStatus = await adminStatus.create({ isOnline: req.body.isOnline });
+            res.send({ msg: 'Admin status created successfully for the first time', data: existingStatus });
+        } else {
+            // Update the existing admin status document
+            const update = { isOnline: req.body.isOnline }; 
+            const updatedStatus = await adminStatus.findOneAndUpdate(filter, update);
+
+            res.send({ msg: 'Admin status updated successfully', data: updatedStatus });
+        }
     } catch (error) {
-        console.error('Error fetching products by subcategory:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        console.error('Error updating admin status:', error);
+        res.status(500).send({ msg: 'Error updating admin status' });
     }
 });
-  
 
 
 const port = process.env.PORT || 8080;

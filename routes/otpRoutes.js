@@ -12,6 +12,7 @@ const transporter = nodemailer.createTransport({
     },
 });
 
+
 // Generate and send OTP with an attractive email template
 router.post('/generate-otp', async (req, res) => {
     try {
