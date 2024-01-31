@@ -173,6 +173,31 @@ app.get("/getallusers", async (req, res) => {
 	}
 });
 
+// Get user by ID
+app.get("/getuser/:id", async (req, res) => {
+	try {
+		const userId = req.params.id;
+		if (!userId) {
+			return res.status(400).send({ message: "Invalid user ID." });
+		}
+
+		// Attempt to find the user by ID in both models
+		const basicUser = await Usermodel.findById(userId);
+		const googleUser = await GoogleUsermodel.findById(userId);
+
+		// Check if the user is found in either model
+		if (basicUser) {
+			return res.send(basicUser);
+		} else if (googleUser) {
+			return res.send(googleUser);
+		} else {
+			return res.status(404).send({ message: "User not found." });
+		}
+	} catch (error) {
+		res.status(500).send({ message: "Error fetching user by ID." });
+	}
+});
+
 // Delete User by ID
 app.delete("/deleteuser/:userId", async (req, res) => {
 	try {
@@ -691,20 +716,20 @@ app.post("/order", authenticate, async (req, res) => {
 		// 	],
 		// 	subject: '🌟 Order Confirmation - Knitsilk 🌟',
 		// 	htmlContent: `
-        //         <!-- User confirmation email content -->
-        //         <div style="text-align: center; background-color: #6FA82F; color: white; padding: 20px;">
-        //             <img src="https://knitsilk.netlify.app/static/media/Knitsilk%20logo.3188ad111cd972e3b365.png" alt="Knitsilk Logo" style="max-width: 200px; height: auto;">
-        //             <h1>Order Confirmation</h1>
-        //             <p>Thank you for placing an order with us. Your order details:</p>
-        //             <p><strong>Order ID:</strong> ${newOrderDraft._id}</p>
-        //             <p><strong>Customer Name:</strong> ${customerInfo.shipping.customerName}</p>
-        //             <p><strong>Email:</strong> ${userEmail}</p>
-        //             <!-- Include other order details as needed -->
-        //             <p><strong>Final Amount:</strong> ${finalAmount}</p>
-        //             <p>For any inquiries or assistance, feel free to contact us at <a href="mailto:support@knitsilk.com">support@knitsilk.com</a>.</p>
-        //             <p>Best Regards,<br>KnitSilk</p>
-        //         </div>
-        //     `,
+		//         <!-- User confirmation email content -->
+		//         <div style="text-align: center; background-color: #6FA82F; color: white; padding: 20px;">
+		//             <img src="https://knitsilk.netlify.app/static/media/Knitsilk%20logo.3188ad111cd972e3b365.png" alt="Knitsilk Logo" style="max-width: 200px; height: auto;">
+		//             <h1>Order Confirmation</h1>
+		//             <p>Thank you for placing an order with us. Your order details:</p>
+		//             <p><strong>Order ID:</strong> ${newOrderDraft._id}</p>
+		//             <p><strong>Customer Name:</strong> ${customerInfo.shipping.customerName}</p>
+		//             <p><strong>Email:</strong> ${userEmail}</p>
+		//             <!-- Include other order details as needed -->
+		//             <p><strong>Final Amount:</strong> ${finalAmount}</p>
+		//             <p>For any inquiries or assistance, feel free to contact us at <a href="mailto:support@knitsilk.com">support@knitsilk.com</a>.</p>
+		//             <p>Best Regards,<br>KnitSilk</p>
+		//         </div>
+		//     `,
 		// };
 
 		// // Send confirmation email to the admin
@@ -721,12 +746,12 @@ app.post("/order", authenticate, async (req, res) => {
 		// 	],
 		// 	subject: '🌟 New Order Received - Knitsilk 🌟',
 		// 	htmlContent: `
-        //         <p>New order received with the following details:</p>
-        //         <p><strong>Customer Name:</strong> ${customerInfo.shipping.customerName}</p>
-        //         <p><strong>Email:</strong> ${userEmail}</p>
-        //         <!-- Include other order details as needed -->
-        //         <p><strong>Final Amount:</strong> ${finalAmount}</p>
-        //     `,
+		//         <p>New order received with the following details:</p>
+		//         <p><strong>Customer Name:</strong> ${customerInfo.shipping.customerName}</p>
+		//         <p><strong>Email:</strong> ${userEmail}</p>
+		//         <!-- Include other order details as needed -->
+		//         <p><strong>Final Amount:</strong> ${finalAmount}</p>
+		//     `,
 		// };
 
 		// const brevoHeaders = {
@@ -915,33 +940,33 @@ app.post('/products/offers/filterBySubcategories', async (req, res) => {
 	}
 });
 
-app.get('/getadminstatus',async(req,res)=>{
-let status =await adminStatus.findOne({});
-res.send({msg:`Admin is ${status}`,data:status})
+app.get('/getadminstatus', async (req, res) => {
+	let status = await adminStatus.findOne({});
+	res.send({ msg: `Admin is ${status}`, data: status })
 })
 
 app.post('/putadminstatus', async (req, res) => {
-    try {
-        const filter = {}; 
+	try {
+		const filter = {};
 
-        // Check if admin status document exists
-        let existingStatus = await adminStatus.findOne(filter);
+		// Check if admin status document exists
+		let existingStatus = await adminStatus.findOne(filter);
 
-        if (!existingStatus) {
-            // Create a new admin status document with isOnline field
-            existingStatus = await adminStatus.create({ isOnline: req.body.isOnline });
-            res.send({ msg: 'Admin status created successfully for the first time', data: existingStatus });
-        } else {
-            // Update the existing admin status document
-            const update = { isOnline: req.body.isOnline }; 
-            const updatedStatus = await adminStatus.findOneAndUpdate(filter, update);
+		if (!existingStatus) {
+			// Create a new admin status document with isOnline field
+			existingStatus = await adminStatus.create({ isOnline: req.body.isOnline });
+			res.send({ msg: 'Admin status created successfully for the first time', data: existingStatus });
+		} else {
+			// Update the existing admin status document
+			const update = { isOnline: req.body.isOnline };
+			const updatedStatus = await adminStatus.findOneAndUpdate(filter, update);
 
-            res.send({ msg: 'Admin status updated successfully', data: updatedStatus });
-        }
-    } catch (error) {
-        console.error('Error updating admin status:', error);
-        res.status(500).send({ msg: 'Error updating admin status' });
-    }
+			res.send({ msg: 'Admin status updated successfully', data: updatedStatus });
+		}
+	} catch (error) {
+		console.error('Error updating admin status:', error);
+		res.status(500).send({ msg: 'Error updating admin status' });
+	}
 });
 
 
