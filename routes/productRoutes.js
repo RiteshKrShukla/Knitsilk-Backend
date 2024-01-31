@@ -18,8 +18,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-
-
 router.post('/products', upload.single('photo'), async (req, res) => {
   try {
     const {
@@ -27,6 +25,9 @@ router.post('/products', upload.single('photo'), async (req, res) => {
       userCurrency,
       description,
       discount,
+      discountTitle,
+      saleStartDate,
+      saleEndDate,
       price,
       globalPrice,
       color,
@@ -98,6 +99,9 @@ router.post('/products', upload.single('photo'), async (req, res) => {
       title,
       description,
       discount,
+      discountTitle,
+      saleStartDate,
+      saleEndDate,
       userCurrency,
       price,
       globalPrice,

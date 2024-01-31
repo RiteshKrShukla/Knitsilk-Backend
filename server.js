@@ -41,6 +41,7 @@ const subcategoryRoutes = require('./routes/subcategoryRoutes');
 const messagesRouter = require('./routes/messages');
 const subcategory = require("./models/subcategoryModel");
 const subscribeRoutes = require('./routes/subscribe');
+const promoCodeRoutes = require('./routes/promoCodeRoutes');
 const b2b = require('./routes/b2bInquiry');
 const couponRoutes = require('./routes/couponRoutes');
 const order = require("./models/order");
@@ -93,6 +94,7 @@ app.use('/b2bInquiry', b2b);
 app.use('/discount', couponRoutes);
 app.use('/campaign', emailRoutes)
 app.use('/blogs', blogRoutes);
+app.use('/promo-codes', promoCodeRoutes);
 
 const razorpayRoute = require('./routes/razorpayRoute');
 const orderDraft = require("./models/orderDraft");

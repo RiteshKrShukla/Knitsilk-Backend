@@ -12,13 +12,6 @@ router.post('/', async (req, res) => {
             email,
             phone,
             messages,
-            productName,
-            color,
-            quantity,
-            country,
-            state,
-            city,
-            pinCode,
         } = req.body;
 
         // Save the B2B inquiry to the database
@@ -26,14 +19,7 @@ router.post('/', async (req, res) => {
             name,
             email,
             phone,
-            messages,
-            productName,
-            color,
-            quantity,
-            country,
-            state,
-            city,
-            pinCode,
+            messages,            
         });
 
         await b2bInquiry.save();
