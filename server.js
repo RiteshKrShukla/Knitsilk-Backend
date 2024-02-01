@@ -66,7 +66,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 const corsOptions = {
-	origin: 'https://globaltexmart.com',
+	origin: 'http://localhost:3000',
 	methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
 	credentials: true,
 };
@@ -144,14 +144,15 @@ app.post("/login", async (req, res) => {
 // Google login (give email and name only here as body)
 app.post('/login/google', async (req, res) => {
 	try {
-		let { email, name } = req.body;
+		let { email, name,picture } = req.body;
+		console.log(email, name);
 		let user = await GoogleUsermodel.findOne({ email });
 		if (user) {
 			let token = jwt.sign({ userID: user._id }, process.env.SECRET_KEY_FOR_LOGIN_VERIFY);
 			res.send({ msg: "Sign In with google success", token, userName: name });
 		} else {
 			// User not found, create a new user in the database
-			let newUser = await GoogleUsermodel.create({ name, email });
+			let newUser = await GoogleUsermodel.create({ name, email,picture });
 			let token = jwt.sign({ userID: newUser._id }, process.env.SECRET_KEY_FOR_LOGIN_VERIFY);
 			res.send({ msg: "Sign Up with google success", token, userName: name });
 		}
@@ -969,6 +970,31 @@ app.post('/putadminstatus', async (req, res) => {
 	}
 });
 
+
+// Get user by ID
+app.get("/getuser/:id", async (req, res) => {
+	try {
+		const userId = req.params.id;
+		if (!userId) {
+			return res.status(400).send({ message: "Invalid user ID." });
+		}
+
+		// Attempt to find the user by ID in both models
+		const basicUser = await Usermodel.findById(userId);
+		const googleUser = await GoogleUsermodel.findById(userId);
+
+		// Check if the user is found in either model
+		if (basicUser) {
+			return res.send(basicUser);
+		} else if (googleUser) {
+			return res.send(googleUser);
+		} else {
+			return res.status(404).send({ message: "User not found." });
+		}
+	} catch (error) {
+		res.status(500).send({ message: "Error fetching user by ID." });
+	}
+});
 
 const port = process.env.PORT || 8080;
 app.listen(port, () => console.log(`Listening on port ${port}...`));

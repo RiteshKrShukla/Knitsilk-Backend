@@ -11,7 +11,6 @@ const customerSchema = new mongoose.Schema({
     zipCode: { type: String, required: true },
     country: { type: String, required: true },
   },
-  
   billing: {
     customerName: { type: String },
     email: { type: String },
