@@ -66,10 +66,11 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 const corsOptions = {
-	origin: 'https://globaltexmart.com',
-	methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-	credentials: true,
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
 };
+
 
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
